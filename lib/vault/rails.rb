@@ -74,7 +74,7 @@ module Vault
       # @return [String]
       #   the encrypted cipher text
       def encrypt(path, key, plaintext, client: self.client, context: nil)
-        if plaintext.blank?
+        if plaintext.nil?
           return plaintext
         end
 
@@ -178,9 +178,18 @@ module Vault
         return nil if plaintext.nil?
 
         cipher = OpenSSL::Cipher::AES.new(128, :CBC)
+        buffer = ''
+
         cipher.encrypt
         cipher.key = memory_key_for(path, key, context: context)
-        return DEV_PREFIX + Base64.strict_encode64(cipher.update(plaintext) + cipher.final)
+
+        if !plaintext.empty?
+          buffer << cipher.update(plaintext)
+        end
+
+        buffer << cipher.final
+
+        return DEV_PREFIX + Base64.strict_encode64(buffer)
       end
 
       # Perform in-memory decryption. This is useful for testing and development.
