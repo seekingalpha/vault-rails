@@ -60,6 +60,19 @@ module Vault
         client.respond_to?(m, include_private) || super
       end
 
+      def metadata_client(client, metadata)
+        return if !self.enabled?
+        return client if metadata.nil?
+        secret = client.auth_token.create(
+          display_name: client.application,
+          num_uses: 1,
+          meta: metadata
+        )
+        new_client = client.dup
+        new_client.token = secret.auth.client_token
+        new_client
+      end
+
       # Encrypt the given plaintext data using the provided mount and key.
       #
       # @param [String] path
@@ -73,7 +86,7 @@ module Vault
       #
       # @return [String]
       #   the encrypted cipher text
-      def encrypt(path, key, plaintext, client: self.client, context: nil)
+      def encrypt(path, key, plaintext, client: self.client, context: nil, metadata: nil)
         if plaintext.nil?
           return plaintext
         end
@@ -82,10 +95,12 @@ module Vault
         key  = key.to_s if !key.is_a?(String)
 
         with_retries do
+          metadata_client ||= metadata_client(client, metadata)
+
           if self.enabled?
-            result = self.vault_encrypt(path, key, plaintext, client: client, context: context)
+            result = self.vault_encrypt(path, key, plaintext, client: metadata_client, context: context)
           else
-            result = self.memory_encrypt(path, key, plaintext, client: client, context: context)
+            result = self.memory_encrypt(path, key, plaintext, client: metadata_client, context: context)
           end
 
           return self.force_encoding(result)
@@ -105,7 +120,7 @@ module Vault
       #
       # @return [String]
       #   the decrypted plaintext text
-      def decrypt(path, key, ciphertext, client: self.client, context: nil)
+      def decrypt(path, key, ciphertext, client: self.client, context: nil, metadata: nil)
         if ciphertext.blank?
           return ciphertext
         end
@@ -114,10 +129,12 @@ module Vault
         key  = key.to_s if !key.is_a?(String)
 
         with_retries do
+          metadata_client ||= metadata_client(client, metadata)
+
           if self.enabled?
-            result = self.vault_decrypt(path, key, ciphertext, client: client, context: context)
+            result = self.vault_decrypt(path, key, ciphertext, client: metadata_client, context: context)
           else
-            result = self.memory_decrypt(path, key, ciphertext, client: client, context: context)
+            result = self.memory_decrypt(path, key, ciphertext, client: metadata_client, context: context)
           end
 
           return self.force_encoding(result)
