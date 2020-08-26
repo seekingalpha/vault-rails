@@ -101,9 +101,9 @@ module Vault
 
           result =
             if enabled?
-              vault_encrypt(path, key, plaintext, metadata_client, context: context)
+              vault_encrypt(path, key, plaintext, client: metadata_client, context: context)
             else
-              memory_encrypt(path, key, plaintext, metadata_client, context: context)
+              memory_encrypt(path, key, plaintext, client: metadata_client, context: context)
             end
 
           return force_encoding(result)
@@ -135,9 +135,9 @@ module Vault
 
           result =
             if enabled?
-              vault_decrypt(path, key, ciphertext, metadata_client, context: context)
+              vault_decrypt(path, key, ciphertext, client: metadata_client, context: context)
             else
-              memory_decrypt(path, key, ciphertext, metadata_client, context: context)
+              memory_decrypt(path, key, ciphertext, client: metadata_client, context: context)
             end
 
           return force_encoding(result)
@@ -201,7 +201,7 @@ module Vault
         cipher.encrypt
         cipher.key = memory_key_for(path, key, context: context)
 
-        buffer = DEV_PREFIX
+        buffer = ''
 
         if !plaintext.empty?
           buffer << cipher.update(plaintext)
@@ -209,7 +209,7 @@ module Vault
 
         buffer << cipher.final
 
-        Base64.strict_encode64(buffer)
+        Base64.strict_encode64(DEV_PREFIX + buffer)
       end
 
       # Perform in-memory decryption. This is useful for testing and development.
